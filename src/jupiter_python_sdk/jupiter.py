@@ -530,7 +530,7 @@ class Jupiter():
     ENDPOINT_APIS_URL = {
         "QUOTE": "https://quote-api.jup.ag/v6/quote?",
         "SWAP": "https://quote-api.jup.ag/v6/swap",
-        "OPEN_ORDER": "https://jup.ag/api/limit/v1/createOrder",
+        "OPEN_ORDER": "https://api.jup.ag/limit/v2/createOrder",
         "CANCEL_ORDERS": "https://jup.ag/api/limit/v1/cancelOrders",
         "QUERY_OPEN_ORDERS": "https://jup.ag/api/limit/v1/openOrders?wallet=",
         "QUERY_ORDER_HISTORY": "https://jup.ag/api/limit/v1/orderHistory",
@@ -543,7 +543,7 @@ class Jupiter():
         keypair: Keypair,
         quote_api_url: str="https://quote-api.jup.ag/v6/quote?",
         swap_api_url: str="https://quote-api.jup.ag/v6/swap",
-        open_order_api_url: str="https://jup.ag/api/limit/v1/createOrder",
+        open_order_api_url: str="https://api.jup.ag/limit/v2/createOrder",
         cancel_orders_api_url: str="https://jup.ag/api/limit/v1/cancelOrders",
         query_open_orders_api_url: str="https://jup.ag/api/limit/v1/openOrders?wallet=",
         query_order_history_api_url: str="https://jup.ag/api/limit/v1/orderHistory",
@@ -742,26 +742,25 @@ class Jupiter():
             >>> transaction_data = await jupiter.open_order(user_public_key, input_mint, output_mint, in_amount, out_amount)
             {
                 'transaction_data': 'AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgEGC5Qzg6Gwmq0Gtgp4+LWUVz0yQOAuHGNJAGTs0dcqEMVCBvqBKhFi2uRFEKYI4zPatxbdm7DylvnQUby9MexSmeAdsqhWUMQ86Ddz4+7pQFooE6wLglATS/YvzOVUNMOqnyAmC8Ioh9cSvEZniys4XY0OyEvxe39gSdHqlHWJQUPMn4prs0EwIc9JznmgzyMliG5PJTvaFYw75ssASGlB2gMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAImg/TLoYktlelMGKAi4mA0icnTD92092qSZhd3wNABMCv4fVqQvV1OYZ3a3bH43JpI5pIln+UAHnO1fyDJwCfIGm4hX/quBhPtof2NGGMA12sQ53BrrO1WYoPAAAAAAAQan1RcZLFxRIYzJTD1K8X9Y2u4Im6H9ROPb2YoAAAAABt324ddloZPZy+FGzut5rBy0he1fWzeROoz1hX7/AKmr+pT0gdwb1ZeE73qr11921UvCtCB3MMpBcLaiY8+u7QEHDAEABAMCCAIHBgUKCRmFbkqvcJ/1nxAnAAAAAAAAECcAAAAAAAAA',
-                'signature2': Signature(
-                    2Pip6gx9FLGVqmRqfAgwJ8HEuCY8ZbUbVERR18vHyxFngSi3Jxq8Vkpm74hS5zq7RAM6tqGUAkf3ufCBsxGXZrUC,)
             }
         """
         
         keypair = Keypair()
         transaction_parameters = {
-            "owner": self.keypair.pubkey().__str__(),
+            "maker":  self.keypair.pubkey().__str__(),
+            "payer":  self.keypair.pubkey().__str__(),
             "inputMint": input_mint,
             "outputMint": output_mint,
-            "outAmount": out_amount,
-            "inAmount": in_amount,
-            "base": keypair.pubkey().__str__()
+            "params": {
+                "makingAmount": str(in_amount),
+                "takingAmount": str(out_amount)
+            },
+            "computeUnitPrice": "auto"
         }
         if expired_at:
             transaction_parameters['expiredAt'] = expired_at
         transaction_data = httpx.post(url=self.ENDPOINT_APIS_URL['OPEN_ORDER'], json=transaction_parameters).json()['tx']
-        raw_transaction = VersionedTransaction.from_bytes(base64.b64decode(transaction_data))
-        signature2 = keypair.sign_message(message.to_bytes_versioned(raw_transaction.message))
-        return {"transaction_data": transaction_data, "signature2": signature2}
+        return {"transaction_data": transaction_data}
 
     async def cancel_orders(
         self,

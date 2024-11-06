@@ -70,7 +70,7 @@ jupiter = Jupiter(
     keypair=private_key,
     quote_api_url="https://quote-api.jup.ag/v6/quote?",
     swap_api_url="https://quote-api.jup.ag/v6/swap",
-    open_order_api_url="https://jup.ag/api/limit/v1/createOrder",
+    open_order_api_url="https://api.jup.ag/limit/v2/createOrder",
     cancel_orders_api_url="https://jup.ag/api/limit/v1/cancelOrders",
     query_open_orders_api_url="https://jup.ag/api/limit/v1/openOrders?wallet=",
     query_order_history_api_url="https://jup.ag/api/limit/v1/orderHistory",
@@ -107,11 +107,11 @@ transaction_data = await jupiter.open_order(
     in_amount=5_000_000,
     out_amount=100_000,
 )
-# Returns dict: {'transaction_data': serialized transactions to create the limit order, 'signature2': signature of the account that will be opened}
+# Returns dict: {'transaction_data': serialized transactions to create the limit order}
 
 raw_transaction = VersionedTransaction.from_bytes(base64.b64decode(transaction_data['transaction_data']))
 signature = private_key.sign_message(message.to_bytes_versioned(raw_transaction.message))
-signed_txn = VersionedTransaction.populate(raw_transaction.message, [signature, transaction_data['signature2']])
+signed_txn = VersionedTransaction.populate(raw_transaction.message, [signature])
 opts = TxOpts(skip_preflight=False, preflight_commitment=Processed)
 result = await async_client.send_raw_transaction(txn=bytes(signed_txn), opts=opts)
 transaction_id = json.loads(result.to_json())['result']
